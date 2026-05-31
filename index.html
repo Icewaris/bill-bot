@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>บอทหารตังค์</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&family=Prompt:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --pink: #E91E8C;
+  --pink-light: #fce4f3;
+  --pink-mid: #f48cb8;
+  --teal: #00BCD4;
+  --teal-light: #e0f7fa;
+  --green: #00C853;
+  --green-light: #e8f5e9;
+  --red: #F44336;
+  --red-light: #ffebee;
+  --gray: #f5f5f5;
+  --gray2: #eeeeee;
+  --text: #1a1a2e;
+  --text2: #666;
+  --text3: #999;
+  --white: #ffffff;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow: 0 2px 16px rgba(233,30,140,0.10);
+  --shadow-sm: 0 1px 6px rgba(0,0,0,0.07);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; background: #faf5f9; font-family: 'Sarabun', sans-serif; color: var(--text); }
+
+/* NAV */
+.nav { display: flex; background: var(--white); border-bottom: 1.5px solid var(--pink-light); position: sticky; top: 0; z-index: 100; }
+.nav-btn { flex: 1; padding: 14px 0 10px; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; color: var(--text3); border: none; background: none; cursor: pointer; transition: color .2s; position: relative; }
+.nav-btn.active { color: var(--pink); }
+.nav-btn.active::after { content:''; position:absolute; bottom:0; left:20%; right:20%; height:2.5px; background:var(--pink); border-radius:2px 2px 0 0; }
+.nav-icon { font-size: 20px; line-height:1; }
+
+/* PAGE */
+.page { display: none; padding: 16px; padding-bottom: 24px; max-width: 480px; margin: 0 auto; }
+.page.active { display: block; }
+
+/* SUMMARY PAGE */
+.month-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.month-label { font-family: 'Prompt', sans-serif; font-size: 18px; color: var(--text); }
+.month-btn { background: var(--gray); border: none; border-radius: 20px; padding: 6px 14px; font-size: 13px; font-family: 'Sarabun', sans-serif; cursor: pointer; display: flex; align-items: center; gap: 4px; color: var(--text2); }
+
+.summary-card { background: var(--white); border-radius: var(--radius); padding: 18px 16px; box-shadow: var(--shadow); margin-bottom: 14px; }
+.balance-label { font-size: 12px; color: var(--text3); margin-bottom: 4px; }
+.balance-amount { font-family: 'Prompt', sans-serif; font-size: 32px; color: var(--green); font-weight: 700; margin-bottom: 12px; }
+.balance-amount.negative { color: var(--red); }
+.balance-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.balance-box { border-radius: var(--radius-sm); padding: 12px 14px; }
+.balance-box.expense { background: var(--pink-light); }
+.balance-box.income { background: var(--teal-light); }
+.balance-box-label { font-size: 11px; margin-bottom: 3px; }
+.balance-box.expense .balance-box-label { color: var(--pink); }
+.balance-box.income .balance-box-label { color: var(--teal); }
+.balance-box-amount { font-family: 'Prompt', sans-serif; font-size: 18px; font-weight: 600; }
+.balance-box.expense .balance-box-amount { color: var(--pink); }
+.balance-box.income .balance-box-amount { color: var(--teal); }
+
+.chart-card { background: var(--white); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); margin-bottom: 14px; }
+.chart-title { font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 12px; }
+.chart-wrap { display: flex; align-items: center; gap: 16px; }
+.chart-canvas-wrap { width: 120px; height: 120px; flex-shrink: 0; }
+.chart-legend { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.legend-item { display: flex; align-items: center; justify-content: space-between; }
+.legend-dot-name { display: flex; align-items: center; gap: 6px; }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.legend-name { font-size: 12px; color: var(--text2); }
+.legend-val { font-size: 12px; font-weight: 600; color: var(--text); }
+
+.debt-card { background: var(--white); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); margin-bottom: 14px; }
+.debt-title { font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 12px; }
+.debt-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--gray); }
+.debt-row:last-child { border-bottom: none; }
+.debt-person { display: flex; align-items: center; gap: 10px; }
+.debt-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0; }
+.debt-info { font-size: 13px; color: var(--text); }
+.debt-sub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+.debt-amount { font-family: 'Prompt', sans-serif; font-size: 16px; font-weight: 600; color: var(--red); }
+.debt-amount.paid { color: var(--green); }
+.paid-btn { background: var(--green); color: #fff; border: none; border-radius: 20px; padding: 5px 14px; font-size: 12px; font-family: 'Sarabun', sans-serif; cursor: pointer; margin-left: 8px; font-weight: 600; transition: opacity .2s; }
+.paid-btn:active { opacity: .7; }
+
+/* BILLS PAGE */
+.section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; margin-top: 4px; }
+.section-head-title { font-size: 13px; font-weight: 600; color: var(--text2); }
+.filter-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 12px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.filter-row::-webkit-scrollbar { display: none; }
+.filter-chip { flex-shrink: 0; padding: 5px 14px; border-radius: 20px; font-size: 12px; border: 1.5px solid var(--gray2); background: var(--white); color: var(--text2); cursor: pointer; font-family: 'Sarabun', sans-serif; transition: all .15s; white-space: nowrap; }
+.filter-chip.active { background: var(--pink); border-color: var(--pink); color: #fff; }
+
+.bill-group { margin-bottom: 18px; }
+.bill-group-label { font-size: 11px; color: var(--text3); margin-bottom: 8px; padding-left: 2px; }
+.bill-item { background: var(--white); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 8px; box-shadow: var(--shadow-sm); display: flex; align-items: center; gap: 12px; }
+.bill-cat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 2px; }
+.bill-info { flex: 1; min-width: 0; }
+.bill-name { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bill-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.bill-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+.bill-amount { font-family: 'Prompt', sans-serif; font-size: 15px; font-weight: 600; color: var(--pink); }
+.bill-amount.income-amt { color: var(--teal); }
+.bill-actions { display: flex; gap: 6px; }
+.bill-action-btn { width: 28px; height: 28px; border-radius: 8px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; transition: opacity .2s; }
+.bill-action-btn:active { opacity: .6; }
+.btn-edit { background: var(--gray2); }
+.btn-delete { background: var(--red-light); }
+.status-badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+.status-badge.pending { background: var(--pink-light); color: var(--pink); }
+.status-badge.paid { background: var(--green-light); color: var(--green); }
+
+/* MODAL */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; align-items: flex-end; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--white); border-radius: 24px 24px 0 0; padding: 20px 16px 32px; width: 100%; max-height: 85vh; overflow-y: auto; animation: slideUp .25s ease; }
+@keyframes slideUp { from { transform: translateY(60px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+.modal-handle { width: 36px; height: 4px; background: var(--gray2); border-radius: 2px; margin: 0 auto 16px; }
+.modal-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 18px; }
+.form-label { font-size: 12px; color: var(--text2); margin-bottom: 5px; font-weight: 600; }
+.form-input { width: 100%; padding: 11px 14px; border: 1.5px solid var(--gray2); border-radius: var(--radius-sm); font-size: 14px; font-family: 'Sarabun', sans-serif; color: var(--text); margin-bottom: 14px; outline: none; transition: border-color .2s; background: var(--white); }
+.form-input:focus { border-color: var(--pink); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.cat-select { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.cat-chip { padding: 6px 12px; border-radius: 20px; font-size: 12px; border: 1.5px solid var(--gray2); background: var(--white); cursor: pointer; font-family: 'Sarabun', sans-serif; transition: all .15s; }
+.cat-chip.selected { border-color: var(--pink); background: var(--pink-light); color: var(--pink); font-weight: 600; }
+.modal-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
+.btn { padding: 13px; border-radius: var(--radius-sm); font-size: 15px; font-weight: 700; font-family: 'Prompt', sans-serif; border: none; cursor: pointer; transition: opacity .2s; }
+.btn:active { opacity: .75; }
+.btn-cancel { background: var(--gray); color: var(--text2); }
+.btn-save { background: var(--pink); color: #fff; }
+.btn-delete-full { background: var(--red-light); color: var(--red); grid-column: 1/-1; }
+
+/* TOAST */
+.toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #1a1a2e; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; z-index: 300; opacity: 0; transition: opacity .3s; pointer-events: none; white-space: nowrap; }
+.toast.show { opacity: 1; }
+
+/* EMPTY */
+.empty { text-align: center; padding: 40px 20px; color: var(--text3); font-size: 14px; }
+.empty-icon { font-size: 40px; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <button class="nav-btn active" onclick="showPage('summary')" id="nav-summary">
+    <span class="nav-icon">🏠</span>
+    <span>สรุป</span>
+  </button>
+  <button class="nav-btn" onclick="showPage('bills')" id="nav-bills">
+    <span class="nav-icon">📋</span>
+    <span>รายการ</span>
+  </button>
+  <button class="nav-btn" onclick="showPage('members')" id="nav-members">
+    <span class="nav-icon">👥</span>
+    <span>สมาชิก</span>
+  </button>
+</nav>
+
+<!-- SUMMARY PAGE -->
+<div class="page active" id="page-summary">
+  <div class="month-row">
+    <div class="month-label">พฤษภาคม 2569</div>
+    <button class="month-btn" onclick="showToast('เลือกเดือนได้เลย')">◀ ▶ เดือน</button>
+  </div>
+
+  <div class="summary-card">
+    <div class="balance-label">ยอดสุทธิรอบนี้</div>
+    <div class="balance-amount" id="balance-total">฿0</div>
+    <div class="balance-row">
+      <div class="balance-box expense">
+        <div class="balance-box-label">รายจ่าย</div>
+        <div class="balance-box-amount" id="total-expense">฿0</div>
+      </div>
+      <div class="balance-box income">
+        <div class="balance-box-label">รายรับ</div>
+        <div class="balance-box-amount" id="total-income">฿0</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-title">สัดส่วนรายจ่าย</div>
+    <div class="chart-wrap">
+      <div class="chart-canvas-wrap">
+        <canvas id="pieChart"></canvas>
+      </div>
+      <div class="chart-legend" id="chart-legend"></div>
+    </div>
+  </div>
+
+  <div class="debt-card">
+    <div class="debt-title">💸 ยอดค้าง</div>
+    <div id="debt-list"></div>
+  </div>
+</div>
+
+<!-- BILLS PAGE -->
+<div class="page" id="page-bills">
+  <div class="filter-row" id="filter-row">
+    <button class="filter-chip active" onclick="filterBills('all', this)">ทั้งหมด</button>
+    <button class="filter-chip" onclick="filterBills('อาหาร', this)">🍜 อาหาร</button>
+    <button class="filter-chip" onclick="filterBills('เครื่องดื่ม', this)">🥤 เครื่องดื่ม</button>
+    <button class="filter-chip" onclick="filterBills('ชอปปิ้ง', this)">🛒 ชอปปิ้ง</button>
+    <button class="filter-chip" onclick="filterBills('อื่นๆ', this)">📦 อื่นๆ</button>
+  </div>
+  <div id="bills-list"></div>
+</div>
+
+<!-- MEMBERS PAGE -->
+<div class="page" id="page-members">
+  <div class="section-head">
+    <div class="section-head-title">สมาชิกในกลุ่ม</div>
+  </div>
+  <div id="members-list"></div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="modal" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-title">แก้ไขรายการ</div>
+    <div class="form-label">ชื่อรายการ</div>
+    <input class="form-input" id="edit-name" placeholder="เช่น ข้าวผัด, ค่าน้ำ">
+    <div class="form-row">
+      <div>
+        <div class="form-label">จำนวนเงิน (฿)</div>
+        <input class="form-input" id="edit-amount" type="number" placeholder="0">
+      </div>
+      <div>
+        <div class="form-label">จ่ายโดย</div>
+        <input class="form-input" id="edit-paidby" placeholder="ชื่อ">
+      </div>
+    </div>
+    <div class="form-label">หมวดหมู่</div>
+    <div class="cat-select" id="cat-select">
+      <button class="cat-chip selected" onclick="selectCat(this,'อาหาร')">🍜 อาหาร</button>
+      <button class="cat-chip" onclick="selectCat(this,'เครื่องดื่ม')">🥤 เครื่องดื่ม</button>
+      <button class="cat-chip" onclick="selectCat(this,'ชอปปิ้ง')">🛒 ชอปปิ้ง</button>
+      <button class="cat-chip" onclick="selectCat(this,'อื่นๆ')">📦 อื่นๆ</button>
+    </div>
+    <div class="form-label">สถานะ</div>
+    <div class="cat-select" id="status-select">
+      <button class="cat-chip selected" onclick="selectStatus(this,'pending')">⏳ ค้างอยู่</button>
+      <button class="cat-chip" onclick="selectStatus(this,'paid')">✅ จ่ายแล้ว</button>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-cancel" onclick="closeModalDirect()">ยกเลิก</button>
+      <button class="btn btn-save" onclick="saveEdit()">บันทึก ✓</button>
+      <button class="btn btn-delete-full" onclick="deleteItem()">🗑 ลบรายการนี้</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────
+let bills = [
+  { id:1, date:'2025-05-31', name:'ชาบู', amount:450, paidBy:'มิ้ว', members:['เรา','มิ้ว','โอ้'], sharePerPerson:150, category:'อาหาร', status:'pending' },
+  { id:2, date:'2025-05-31', name:'เบียร์', amount:180, paidBy:'มิ้ว', members:['โอ้'], sharePerPerson:180, category:'เครื่องดื่ม', status:'pending' },
+  { id:3, date:'2025-05-31', name:'น้ำ Amazon', amount:55, paidBy:'เรา', members:['เรา'], sharePerPerson:55, category:'เครื่องดื่ม', status:'paid' },
+  { id:4, date:'2025-05-30', name:'ยาคูล', amount:192, paidBy:'โอ้', members:['เรา','โอ้'], sharePerPerson:96, category:'เครื่องดื่ม', status:'pending' },
+  { id:5, date:'2025-05-30', name:'ทุเรียน', amount:250, paidBy:'เรา', members:['เรา','มิ้ว'], sharePerPerson:125, category:'อาหาร', status:'pending' },
+  { id:6, date:'2025-05-29', name:'7-11', amount:335, paidBy:'มิ้ว', members:['เรา','มิ้ว','โอ้'], sharePerPerson:112, category:'ชอปปิ้ง', status:'paid' },
+];
+
+let members = [
+  { name:'เรา', color:'#E91E8C', emoji:'😊' },
+  { name:'มิ้ว', color:'#00BCD4', emoji:'🌸' },
+  { name:'โอ้', color:'#FF9800', emoji:'⭐' },
+];
+
+let currentFilter = 'all';
+let editingId = null;
+let editCat = 'อาหาร';
+let editStatus = 'pending';
+let pieChart = null;
+
+// ── PAGES ──────────────────────────────────────────────
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.getElementById('nav-' + page).classList.add('active');
+  if (page === 'summary') renderSummary();
+  if (page === 'bills') renderBills();
+  if (page === 'members') renderMembers();
+}
+
+// ── SUMMARY ──────────────────────────────────────────────
+function renderSummary() {
+  const pending = bills.filter(b => b.status === 'pending');
+  const totalExpense = bills.reduce((s,b) => s + b.amount, 0);
+  const totalIncome = 0;
+  const net = totalIncome - totalExpense;
+
+  document.getElementById('total-expense').textContent = '฿' + totalExpense.toLocaleString();
+  document.getElementById('total-income').textContent = '฿' + totalIncome.toLocaleString();
+  const balEl = document.getElementById('balance-total');
+  balEl.textContent = (net >= 0 ? '+' : '') + '฿' + net.toLocaleString();
+  balEl.className = 'balance-amount' + (net < 0 ? ' negative' : '');
+
+  // pie chart by category
+  const cats = {};
+  bills.forEach(b => { cats[b.category] = (cats[b.category]||0) + b.amount; });
+  const catColors = { 'อาหาร':'#E91E8C', 'เครื่องดื่ม':'#00BCD4', 'ชอปปิ้ง':'#FF9800', 'อื่นๆ':'#9C27B0' };
+  const labels = Object.keys(cats);
+  const data = labels.map(l => cats[l]);
+  const colors = labels.map(l => catColors[l] || '#ccc');
+
+  if (pieChart) pieChart.destroy();
+  pieChart = new Chart(document.getElementById('pieChart'), {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 0, hoverOffset: 4 }] },
+    options: { cutout: '68%', plugins: { legend: { display: false }, tooltip: { enabled: false } }, animation: { duration: 600 } }
+  });
+
+  const legend = document.getElementById('chart-legend');
+  legend.innerHTML = labels.map((l,i) => `
+    <div class="legend-item">
+      <div class="legend-dot-name">
+        <div class="legend-dot" style="background:${colors[i]}"></div>
+        <span class="legend-name">${l}</span>
+      </div>
+      <span class="legend-val">฿${data[i].toLocaleString()}</span>
+    </div>`).join('');
+
+  // debts
+  const debts = calcDebts();
+  const debtEl = document.getElementById('debt-list');
+  if (debts.length === 0) {
+    debtEl.innerHTML = '<div style="text-align:center;padding:16px;color:var(--text3);font-size:13px">✅ ไม่มียอดค้าง</div>';
+  } else {
+    debtEl.innerHTML = debts.map(d => {
+      const m = members.find(m=>m.name===d.from) || { color:'#ccc', emoji:'👤' };
+      return `<div class="debt-row">
+        <div class="debt-person">
+          <div class="debt-avatar" style="background:${m.color}20;color:${m.color}">${m.emoji}</div>
+          <div>
+            <div class="debt-info"><b>${d.from}</b> ค้าง <b>${d.to}</b></div>
+            <div class="debt-sub">${d.items}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center">
+          <div class="debt-amount">฿${d.amount.toLocaleString()}</div>
+          <button class="paid-btn" onclick="markPaid('${d.from}','${d.to}')">จ่ายแล้ว</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+
+function calcDebts() {
+  const pending = bills.filter(b => b.status === 'pending');
+  const balances = {};
+  pending.forEach(b => {
+    b.members.forEach(m => {
+      if (m !== b.paidBy) {
+        const key = `${m}→${b.paidBy}`;
+        balances[key] = (balances[key]||0) + b.sharePerPerson;
+      }
+    });
+  });
+  return Object.entries(balances).map(([k,v]) => {
+    const [from, to] = k.split('→');
+    const items = pending.filter(b => b.members.includes(from) && b.paidBy === to).map(b=>b.name).join(', ');
+    return { from, to, amount: v, items };
+  }).filter(d => d.amount > 0);
+}
+
+function markPaid(from, to) {
+  bills.forEach(b => {
+    if (b.status === 'pending' && b.members.includes(from) && b.paidBy === to) {
+      b.status = 'paid';
+    }
+  });
+  renderSummary();
+  showToast(`✅ บันทึกว่า ${from} จ่าย ${to} แล้ว`);
+}
+
+// ── BILLS ──────────────────────────────────────────────
+function renderBills() {
+  const filtered = currentFilter === 'all' ? bills : bills.filter(b => b.category === currentFilter);
+  const groups = {};
+  filtered.forEach(b => {
+    const d = new Date(b.date);
+    const label = `${d.getDate()} ${['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][d.getMonth()]} ${d.getFullYear()+543}`;
+    if (!groups[label]) groups[label] = [];
+    groups[label].push(b);
+  });
+  const catColors = { 'อาหาร':'#E91E8C', 'เครื่องดื่ม':'#00BCD4', 'ชอปปิ้ง':'#FF9800', 'อื่นๆ':'#9C27B0' };
+  const el = document.getElementById('bills-list');
+  if (Object.keys(groups).length === 0) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">🧾</div>ไม่มีรายการ</div>';
+    return;
+  }
+  el.innerHTML = Object.entries(groups).map(([label, items]) => `
+    <div class="bill-group">
+      <div class="bill-group-label">${label}</div>
+      ${items.map(b => `
+        <div class="bill-item">
+          <div class="bill-cat-dot" style="background:${catColors[b.category]||'#ccc'}"></div>
+          <div class="bill-info">
+            <div class="bill-name">${b.name}</div>
+            <div class="bill-meta">${b.members.join(', ')} · จ่ายโดย ${b.paidBy}</div>
+          </div>
+          <div class="bill-right">
+            <div style="display:flex;align-items:center;gap:6px">
+              <div class="bill-amount">฿${b.amount.toLocaleString()}</div>
+              <span class="status-badge ${b.status}">${b.status==='paid'?'✓ จ่ายแล้ว':'รอ'}</span>
+            </div>
+            <div class="bill-actions">
+              <button class="bill-action-btn btn-edit" onclick="openEdit(${b.id})">✏️</button>
+              <button class="bill-action-btn btn-delete" onclick="confirmDelete(${b.id})">✕</button>
+            </div>
+          </div>
+        </div>`).join('')}
+    </div>`).join('');
+}
+
+function filterBills(cat, el) {
+  currentFilter = cat;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderBills();
+}
+
+// ── MEMBERS ──────────────────────────────────────────────
+function renderMembers() {
+  const el = document.getElementById('members-list');
+  el.innerHTML = members.map(m => `
+    <div class="bill-item" style="margin-bottom:10px">
+      <div class="debt-avatar" style="background:${m.color}20;color:${m.color};width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">${m.emoji}</div>
+      <div class="bill-info">
+        <div class="bill-name">${m.name}</div>
+        <div class="bill-meta">สมาชิก</div>
+      </div>
+      <button class="bill-action-btn btn-edit" onclick="showToast('แก้ไขชื่อ ${m.name}')">✏️</button>
+    </div>`).join('');
+}
+
+// ── MODAL ──────────────────────────────────────────────
+function openEdit(id) {
+  const b = bills.find(b => b.id === id);
+  if (!b) return;
+  editingId = id;
+  editCat = b.category;
+  editStatus = b.status;
+  document.getElementById('modal-title').textContent = 'แก้ไขรายการ';
+  document.getElementById('edit-name').value = b.name;
+  document.getElementById('edit-amount').value = b.amount;
+  document.getElementById('edit-paidby').value = b.paidBy;
+  document.querySelectorAll('#cat-select .cat-chip').forEach(c => {
+    c.classList.toggle('selected', c.textContent.includes(b.category));
+  });
+  document.querySelectorAll('#status-select .cat-chip').forEach(c => {
+    c.classList.toggle('selected', (b.status==='pending'&&c.textContent.includes('ค้าง')) || (b.status==='paid'&&c.textContent.includes('จ่ายแล้ว')));
+  });
+  document.getElementById('modal').classList.add('open');
+}
+
+function confirmDelete(id) {
+  editingId = id;
+  const b = bills.find(b=>b.id===id);
+  document.getElementById('modal-title').textContent = `ลบ "${b.name}"?`;
+  document.getElementById('edit-name').value = b.name;
+  document.getElementById('edit-amount').value = b.amount;
+  document.getElementById('edit-paidby').value = b.paidBy;
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('modal')) closeModalDirect();
+}
+function closeModalDirect() {
+  document.getElementById('modal').classList.remove('open');
+  editingId = null;
+}
+
+function selectCat(el, cat) {
+  editCat = cat;
+  document.querySelectorAll('#cat-select .cat-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function selectStatus(el, status) {
+  editStatus = status;
+  document.querySelectorAll('#status-select .cat-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function saveEdit() {
+  if (!editingId) return;
+  const b = bills.find(b => b.id === editingId);
+  if (!b) return;
+  b.name = document.getElementById('edit-name').value || b.name;
+  b.amount = parseFloat(document.getElementById('edit-amount').value) || b.amount;
+  b.paidBy = document.getElementById('edit-paidby').value || b.paidBy;
+  b.category = editCat;
+  b.status = editStatus;
+  closeModalDirect();
+  renderBills();
+  showToast('✅ บันทึกแล้ว');
+}
+
+function deleteItem() {
+  if (!editingId) return;
+  bills = bills.filter(b => b.id !== editingId);
+  closeModalDirect();
+  renderBills();
+  showToast('🗑 ลบแล้ว');
+}
+
+// ── TOAST ──────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── INIT ──────────────────────────────────────────────
+renderSummary();
+</script>
+</body>
+</html>
